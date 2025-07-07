@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, ArrowLeft, Target, Link, CheckCircle, Instagram, Youtube } from "lucide-react";
+import { ArrowRight, ArrowLeft, Target, Link, CheckCircle, Instagram, Youtube, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface OnboardingFlowProps {
@@ -14,9 +14,19 @@ interface OnboardingFlowProps {
 const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
   const [step, setStep] = useState(1);
   const [niche, setNiche] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState<"instagram" | "youtube" | "both">("both");
+  const [instagramHandle, setInstagramHandle] = useState("");
+  const [youtubeChannel, setYoutubeChannel] = useState("");
+  const [instagramCode, setInstagramCode] = useState("");
+  const [youtubeCode, setYoutubeCode] = useState("");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Generate random 4-digit codes when user reaches step 2
+  const generateCodes = () => {
+    if (!instagramCode) setInstagramCode(Math.floor(1000 + Math.random() * 9000).toString());
+    if (!youtubeCode) setYoutubeCode(Math.floor(1000 + Math.random() * 9000).toString());
+  };
 
   const handleNext = () => {
     if (step === 1 && !niche) {
@@ -27,6 +37,11 @@ const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
       });
       return;
     }
+    
+    if (step === 2) {
+      generateCodes();
+    }
+    
     setStep(step + 1);
   };
 
@@ -35,7 +50,16 @@ const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
       title: "Setup Complete!",
       description: "Your AI video creation is starting. You'll receive your first video within 24 hours.",
     });
-    // In a real app, this would redirect to dashboard
+  };
+
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCode(type);
+    setTimeout(() => setCopiedCode(null), 2000);
+    toast({
+      title: "Copied!",
+      description: `${type} code copied to clipboard`,
+    });
   };
 
   return (
@@ -100,16 +124,16 @@ const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
           </Card>
         )}
 
-        {/* Step 2: Link Accounts */}
+        {/* Step 2: Choose Platform & Enter Handles */}
         {step === 2 && (
           <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="text-center">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Link className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-2xl">Link Your Accounts</CardTitle>
+              <CardTitle className="text-2xl">Choose Your Platforms</CardTitle>
               <CardDescription className="text-lg">
-                Choose where you want your AI videos to be posted
+                Select where you want your AI videos posted and provide your account details
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -123,7 +147,7 @@ const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
                   <div className="flex items-center gap-3">
                     <Instagram className="w-8 h-8 text-purple-600" />
                     <div>
-                      <h3 className="font-semibold">Instagram Reels</h3>
+                      <h3 className="font-semibold">Instagram Reels Only</h3>
                       <p className="text-sm text-gray-600">Perfect for viral short-form content</p>
                     </div>
                   </div>
@@ -138,7 +162,7 @@ const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
                   <div className="flex items-center gap-3">
                     <Youtube className="w-8 h-8 text-red-600" />
                     <div>
-                      <h3 className="font-semibold">YouTube Shorts</h3>
+                      <h3 className="font-semibold">YouTube Shorts Only</h3>
                       <p className="text-sm text-gray-600">Massive reach and monetization</p>
                     </div>
                   </div>
@@ -163,6 +187,41 @@ const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
                 </div>
               </div>
 
+              {/* Account Details Input */}
+              <div className="space-y-4 pt-4 border-t">
+                <h4 className="font-semibold text-gray-900">Account Details</h4>
+                
+                {(selectedPlatform === "instagram" || selectedPlatform === "both") && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Instagram Handle
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="@your_handle"
+                      value={instagramHandle}
+                      onChange={(e) => setInstagramHandle(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+                )}
+
+                {(selectedPlatform === "youtube" || selectedPlatform === "both") && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      YouTube Channel URL
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="https://www.youtube.com/@your_channel"
+                      value={youtubeChannel}
+                      onChange={(e) => setYoutubeChannel(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3">
                 <Button 
                   onClick={() => setStep(step - 1)}
@@ -175,6 +234,11 @@ const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
                 <Button 
                   onClick={handleNext}
                   className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                  disabled={
+                    (selectedPlatform === "instagram" && !instagramHandle) ||
+                    (selectedPlatform === "youtube" && !youtubeChannel) ||
+                    (selectedPlatform === "both" && (!instagramHandle || !youtubeChannel))
+                  }
                 >
                   Continue
                   <ArrowRight className="ml-2 w-5 h-5" />
@@ -184,7 +248,7 @@ const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
           </Card>
         )}
 
-        {/* Step 3: Verification */}
+        {/* Step 3: Account Verification */}
         {step === 3 && (
           <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="text-center">
@@ -193,28 +257,88 @@ const OnboardingFlow = ({ email }: OnboardingFlowProps) => {
               </div>
               <CardTitle className="text-2xl">Account Verification</CardTitle>
               <CardDescription className="text-lg">
-                We'll send you a 4-digit code to verify your account ownership
+                Follow the steps below to verify your account ownership
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-semibold mb-2">How it works:</h4>
-                <ol className="text-sm space-y-1 list-decimal list-inside text-gray-600">
-                  <li>We'll email you a 4-digit verification code</li>
-                  <li>Post the code as a comment on your latest {selectedPlatform === "instagram" ? "Instagram" : selectedPlatform === "youtube" ? "YouTube" : "Instagram and YouTube"} post</li>
-                  <li>Our system will find and verify the code</li>
-                  <li>Account linked and ready to post!</li>
-                </ol>
-              </div>
+              {/* Instagram Verification */}
+              {(selectedPlatform === "instagram" || selectedPlatform === "both") && (
+                <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Instagram className="w-6 h-6 text-purple-600" />
+                    <h4 className="font-semibold text-purple-900">Instagram Verification</h4>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <p className="text-sm text-purple-800">
+                      <strong>Step 1:</strong> Copy your verification code below
+                    </p>
+                    
+                    <div className="flex items-center gap-2 bg-white p-3 rounded border">
+                      <code className="font-mono text-2xl font-bold text-purple-600">
+                        {instagramCode}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => copyToClipboard(instagramCode, "Instagram")}
+                        className="ml-auto"
+                      >
+                        {copiedCode === "Instagram" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    
+                    <div className="text-sm text-purple-800 space-y-1">
+                      <p><strong>Step 2:</strong> Go to your latest Instagram post</p>
+                      <p><strong>Step 3:</strong> Comment <code className="bg-white px-1 rounded font-mono">{instagramCode}</code> on your post</p>
+                      <p><strong>Step 4:</strong> Keep the comment public for verification</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              <Input
-                type="text"
-                placeholder="Enter 4-digit code (e.g., 1234)"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                className="h-14 text-lg text-center"
-                maxLength={4}
-              />
+              {/* YouTube Verification */}
+              {(selectedPlatform === "youtube" || selectedPlatform === "both") && (
+                <div className="bg-red-50 p-6 rounded-lg border border-red-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Youtube className="w-6 h-6 text-red-600" />
+                    <h4 className="font-semibold text-red-900">YouTube Verification</h4>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <p className="text-sm text-red-800">
+                      <strong>Step 1:</strong> Copy your verification code below
+                    </p>
+                    
+                    <div className="flex items-center gap-2 bg-white p-3 rounded border">
+                      <code className="font-mono text-2xl font-bold text-red-600">
+                        {youtubeCode}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => copyToClipboard(youtubeCode, "YouTube")}
+                        className="ml-auto"
+                      >
+                        {copiedCode === "YouTube" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    
+                    <div className="text-sm text-red-800 space-y-1">
+                      <p><strong>Step 2:</strong> Go to your latest YouTube video</p>
+                      <p><strong>Step 3:</strong> Comment <code className="bg-white px-1 rounded font-mono">{youtubeCode}</code> on your video</p>
+                      <p><strong>Step 4:</strong> Keep the comment public for verification</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Our system will automatically detect your comments within 2-3 minutes. 
+                  You can delete the verification comments after successful linking.
+                </p>
+              </div>
 
               <div className="flex gap-3">
                 <Button 
